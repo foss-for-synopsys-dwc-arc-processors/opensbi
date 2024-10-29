@@ -46,7 +46,13 @@ platform-objs-y += platform.o
 
 # Optional parameter for path to external FDT
 # FW_FDT_PATH="path to platform flattened device tree file"
-
+ifeq ($(PLATFORM_RISCV_XLEN), 32)
+platform-objs-y += nsim-riscv32.o
+platform-varprefix-nsim.o = dt_nsim-riscv32
+else
+platform-objs-y += nsim-riscv64.o
+platform-varprefix-nsim.o = dt_nsim-risc64
+endif
 #
 # Dynamic firmware configuration.
 # Optional parameters are commented out. Uncomment and define these parameters
@@ -99,4 +105,4 @@ endif
 # You can use fixed address for payload firmware as an alternative option.
 # SBI will prefer "FW_PAYLOAD_FDT_ADDR" if both "FW_PAYLOAD_FDT_OFFSET"
 # and "FW_PAYLOAD_FDT_ADDR" are defined.
-# FW_PAYLOAD_FDT_ADDR=0x82200000
+FW_PAYLOAD_FDT_ADDR=0x8C000000
