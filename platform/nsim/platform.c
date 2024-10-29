@@ -13,6 +13,8 @@
  * Include these files as needed.
  * See objects.mk PLATFORM_xxx configuration parameters.
  */
+#include <sbi_utils/fdt/fdt_helper.h>
+#include <sbi_utils/fdt/fdt_fixup.h>
 #include <sbi_utils/ipi/aclint_mswi.h>
 #include <sbi_utils/irqchip/plic.h>
 #include <sbi_utils/serial/uart8250.h>
@@ -77,6 +79,16 @@ static int platform_early_init(bool cold_boot)
  */
 static int platform_final_init(bool cold_boot)
 {
+	void *fdt;
+
+	if (!cold_boot)
+		return 0;
+
+	fdt = fdt_get_address();
+
+	fdt_cpu_fixup(fdt);
+	fdt_fixups(fdt);
+
 	return 0;
 }
 
