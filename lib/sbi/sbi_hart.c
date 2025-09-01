@@ -116,6 +116,8 @@ static void mstatus_init(struct sbi_scratch *scratch)
 #if __riscv_xlen == 32
 		menvcfg_val |= ((uint64_t)csr_read(CSR_MENVCFGH)) << 32;
 #endif
+		/* Start with a clean slate - only set the bits we need */
+		menvcfg_val = 0;
 
 #define __set_menvcfg_ext(__ext, __bits)				\
 		if (sbi_hart_has_extension(scratch, __ext))		\
@@ -148,10 +150,17 @@ static void mstatus_init(struct sbi_scratch *scratch)
 		if (sbi_hart_has_extension(scratch, SBI_HART_EXT_SVADE))
 			menvcfg_val &= ~ENVCFG_ADUE;
 
+		sbi_printf("DEBUG: Writing menvcfg=0x%lx (CBZE bit=%d)\n", 
+			   menvcfg_val, (menvcfg_val & ENVCFG_CBZE) ? 1 : 0);
 		csr_write(CSR_MENVCFG, menvcfg_val);
 #if __riscv_xlen == 32
 		csr_write(CSR_MENVCFGH, menvcfg_val >> 32);
 #endif
+		{
+			unsigned long readback = csr_read(CSR_MENVCFG);
+			sbi_printf("DEBUG: menvcfg readback=0x%lx (CBZE bit=%d)\n",
+				   readback, (readback & ENVCFG_CBZE) ? 1 : 0);
+		}
 
 		/* Enable S-mode access to seed CSR */
 		if (sbi_hart_has_extension(scratch, SBI_HART_EXT_ZKR)) {

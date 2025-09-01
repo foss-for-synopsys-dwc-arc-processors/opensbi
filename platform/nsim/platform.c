@@ -7,6 +7,8 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_const.h>
+#include <sbi/sbi_bitops.h>
+#include <sbi/sbi_hart.h>
 #include <sbi/sbi_platform.h>
 
 /*
@@ -144,6 +146,18 @@ static int platform_timer_init(bool cold_boot)
 	return aclint_mtimer_warm_init();
 }
 
+static int nsim_extensions_init(struct sbi_hart_features *hfeatures)
+{
+	/*
+	 * Enable Zicboz (Cache Block Zero) extension for nSIM platform.
+	 * This allows cbo.zero instruction to execute in S-mode by setting
+	 * the menvcfg.CBZE bit in sbi_hart_reinit().
+	 */
+	__set_bit(SBI_HART_EXT_ZICBOZ, hfeatures->extensions);
+	
+	return 0;
+}
+
 /*
  * Platform descriptor.
  */
@@ -154,7 +168,7 @@ const struct sbi_platform_operations platform_ops = {
 	.final_init		= platform_final_init,
 	.early_exit		= NULL,
 	.final_exit		= NULL,
-	.extensions_init	= NULL,
+	.extensions_init	= nsim_extensions_init,
 	.domains_init		= NULL,
 	.irqchip_init		= platform_irqchip_init,
 	.irqchip_exit		= NULL,
