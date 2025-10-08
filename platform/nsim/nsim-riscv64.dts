@@ -52,7 +52,7 @@
 
 	chosen {
 		rng-seed = <0x55404330 0x95fa28f7 0x4b68e510 0xff7bec81 0xffe0df4d 0x9d97558 0x42719e74 0xb6f0ec>;
-		bootargs = "earlycon=uart8250,mmio32,0x10000000,115200n8 console=ttyS0,115200n8 root=/dev/vda1 rw print-fatal-signals=1";
+		bootargs = "earlycon=sbi console=ttyS0,115200n8 rdinit=/sbin/init";
 	};
 
 	soc {
