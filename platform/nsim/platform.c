@@ -18,14 +18,10 @@
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/fdt/fdt_fixup.h>
 #include <sbi_utils/ipi/aclint_mswi.h>
-#include <sbi_utils/irqchip/plic.h>
+#include <sbi_utils/irqchip/fdt_irqchip.h>
 #include <sbi_utils/serial/uart8250.h>
 #include <sbi_utils/timer/aclint_mtimer.h>
 
-#define PLATFORM_PLIC_ADDR		0xc000000
-#define PLATFORM_PLIC_SIZE		(0x200000 + \
-					 (PLATFORM_HART_COUNT * 0x1000))
-#define PLATFORM_PLIC_NUM_SOURCES	128
 #define PLATFORM_HART_COUNT		1
 #define PLATFORM_CLINT_ADDR		0x2000000
 #define PLATFORM_ACLINT_MTIMER_FREQ	10000000
@@ -36,12 +32,6 @@
 #define PLATFORM_UART_ADDR		0x10000000
 #define PLATFORM_UART_INPUT_FREQ	10000000
 #define PLATFORM_UART_BAUDRATE		115200
-
-static struct plic_data plic = {
-	.addr = PLATFORM_PLIC_ADDR,
-	.size = PLATFORM_PLIC_SIZE,
-	.num_src = PLATFORM_PLIC_NUM_SOURCES,
-};
 
 static struct aclint_mswi_data mswi = {
 	.addr = PLATFORM_ACLINT_MSWI_ADDR,
@@ -95,22 +85,8 @@ static int platform_final_init(bool cold_boot)
 }
 
 /*
- * Initialize the platform interrupt controller for current HART.
+ * Initialize the platform interrupt controller from the FDT.
  */
-static int platform_irqchip_init(bool cold_boot)
-{
-	u32 hartid = current_hartid();
-	int ret;
-
-	/* Example if the generic PLIC driver is used */
-	if (cold_boot) {
-		ret = plic_cold_irqchip_init(&plic);
-		if (ret)
-			return ret;
-	}
-
-	return plic_warm_irqchip_init(&plic, 2 * hartid, 2 * hartid + 1);
-}
 
 /*
  * Initialize IPI for current HART.
@@ -148,13 +124,11 @@ static int platform_timer_init(bool cold_boot)
 
 static int nsim_extensions_init(struct sbi_hart_features *hfeatures)
 {
-	/*
-	 * Enable Zicboz (Cache Block Zero) extension for nSIM platform.
-	 * This allows cbo.zero instruction to execute in S-mode by setting
-	 * the menvcfg.CBZE bit in sbi_hart_reinit().
-	 */
-	__set_bit(SBI_HART_EXT_ZICBOZ, hfeatures->extensions);
-	
+	/* Parse ISA extensions from the FDT so that menvcfg is configured
+	 * to allow S-mode access to CBO instructions (CBCFE, CBIE, CBZE). */
+	fdt_parse_isa_extensions(fdt_get_address(), current_hartid(),
+				hfeatures->extensions);
+
 	return 0;
 }
 
@@ -170,7 +144,7 @@ const struct sbi_platform_operations platform_ops = {
 	.final_exit		= NULL,
 	.extensions_init	= nsim_extensions_init,
 	.domains_init		= NULL,
-	.irqchip_init		= platform_irqchip_init,
+	.irqchip_init		= fdt_irqchip_init,
 	.irqchip_exit		= NULL,
 	.ipi_init		= platform_ipi_init,
 	.ipi_exit		= NULL,
